@@ -13,17 +13,7 @@ class DataLoader(object):
         '''
         self.num_steps = num_steps
         f = open(filename, 'r').read()
-        if type(f) == 'str':
-            tokenized = f.lower().split()
-        elif type(f) == 'list':
-            if type(f[0]) == 'str':
-                tokenized = f
-            elif type(f[0]) == 'list':
-                tokenized = [word for sent in f for word in sent]
-            else:
-                raise Exception('Datatype not understood, please input either a string, list of lists, or list representing your corpus')
-        else:
-            raise Exception('Datatype not understood, please input either a string, list of lists, or list representing your corpus')
+        tokenized = f.lower().split()
         counts = collections.Counter(tokenized)
         self.data = []
         for w in tokenized:
