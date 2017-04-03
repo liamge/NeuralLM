@@ -56,10 +56,13 @@ class Model(object):
             W = tf.Variable(tf.random_normal([len(self.data.V), self.conf.batch_size], -1.0, 1.0))
         else:
             W = tf.Variable(np.zeros([len(self.data.V), self.conf.batch_size]), trainable=False)
+        pass    
 
     @define_scope
     def optimize(self):
-        pass
+        logprob = tf.log(self.prediction + 1e-12)
+        optimizer = tf.train.GradientDescentOptimiser(self.conf.lr)
+        return optimizer.minimize(-logprob)
 
     @define_scope
     def error(self):
