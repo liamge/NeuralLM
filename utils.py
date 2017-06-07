@@ -1,4 +1,5 @@
 import collections
+import numpy as np
 
 #TODO: Handle train/test/validation data
 #TODO: Write _make_batches
@@ -13,6 +14,7 @@ class DataLoader(object):
         '''
         self.num_steps = num_steps
         f = open(filename, 'r').read()
+        f.replace('\n', '<EOS>')
         tokenized = f.lower().split()
         counts = collections.Counter(tokenized)
         self.data = []
@@ -25,7 +27,7 @@ class DataLoader(object):
         self.N = len(self.data)
         self.idx2word = dict(zip(enumerate(self.V)))
         self.word2idx = {value:key for (key, value) in self.idx2word.items()}
-        self.batches, self.labels = _make_batches(batch_size)
+        self.batches, self.labels = self._make_batches(batch_size)
         self.num_batches = 0
 
     def _cast_index(self):
@@ -35,7 +37,7 @@ class DataLoader(object):
         '''
         return [self.word2idx[w] for w in self.data if w in self.word2idx]
 
-    def _make_batches(self, batch_size):
+    def _make_batches(self, batch_size, shuffle=False):
         '''
         :param batch_size: size of minibatches
         :return: object consisting of all batches in corpus to be loaded with _load_batches
@@ -43,7 +45,8 @@ class DataLoader(object):
         batch_len = self.N // batch_size
         epoch_size = (batch_len - 1) // self.num_steps
         assert epoch_size > 0, "Batch size caused epoch size to be 0, please try smaller batch size"
-        pass
+        if shuffle:
+            indices = np.arange(self.N)
 
     def _load_next_batch(self):
         # If last batch reset to new epoch
@@ -55,3 +58,12 @@ class DataLoader(object):
             temp = self.num_batches
             self.num_batches += 1
             return self.batches[temp], self.labels[temp]
+
+class SmallConfig:
+    pass
+
+class MediumConfig:
+    pass
+
+class LargeConfig:
+    pass

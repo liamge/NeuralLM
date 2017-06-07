@@ -15,13 +15,12 @@ def parse_args():
 
 def train_model(model, visualize_embeddings=True):
     '''
-    :param model: model object which has had model._build_graph() already run
+    :param model: model object which has had model.build_graph() already run
     :param num_train_steps: number of steps to train model
     :return: n/a
     '''
     saver = tf.train.Saver()
 
-    initial_step = 0
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         ckpt = tf.train.get_checkpoint_state(os.path.dirname('checkpoints/checkpoint'))
@@ -32,7 +31,7 @@ def train_model(model, visualize_embeddings=True):
         total_loss = 0.0
         initial_step = model.global_step.eval()
         for index in range(initial_step + model.conf.num_epochs):
-            batch_X, batch_y_ = model.data._load_next_batch()
+            batch_X, batch_y_ = model.data.load_next_batch()
             feed_dict = {model.train_input: batch_X, model.train_labels: batch_y_}
             loss_batch, _, summary = sess.run([model.loss, model.optimizer, model.summary_op],
                                               feed_dict=feed_dict)
@@ -71,6 +70,6 @@ if __name__ == "__main__":
         print('Error: Configuration {} not accepted, please use either large, medium, or small configs.'.format(args['conf']))
 
     model = BasicNeuralLM(conf, data)
-    model._build_graph()
+    model.build_graph()
 
     train_model(model, args['train_steps'])
