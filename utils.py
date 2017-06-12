@@ -103,7 +103,9 @@ class DataLoader(object):
             self.all_batch_triples[kind][2]=0
             return False
         }
-        return self.all_batch_triples[kind][0][self.all_batch_triples[kind][2]], self.all_batch_triples[kind][1][self.all_batch_triples[kind][2]]
+        answer = self.all_batch_triples[kind][0][self.all_batch_triples[kind][2]], self.all_batch_triples[kind][1][self.all_batch_triples[kind][2]]
+        self.all_batch_triples[kind][2]+=1
+        return answer
 
 class SmallConfig:
     pass
