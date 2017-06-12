@@ -25,7 +25,6 @@ class DataLoader(object):
         for line in filereader.readlines():
             tokenized = word_tokenize(line.lower())
             counts.update(tokenized)
-            tokenized.append('<EOS>')
             lines.append(tokenized)
         #consolidate vocabulary
         for w in counts:
@@ -34,6 +33,7 @@ class DataLoader(object):
         self.vocab=[]
         self.V=len(vocab)
         self.vocab.append("<UNK>")
+        self.vocab.append("#")
 
         #filter low frequqency words
         for line in lines[]:
@@ -45,15 +45,21 @@ class DataLoader(object):
         #shuffle the lines and split them in train test and validation
         random.shuffle(lines)
         num_sents= len (lines)
-        self.train_sents, self.test_sents, self.val_sents = lines[:floor(numsents*0.7)] ,lines[floor(numsents*0.7):floor(numsents*0.85)],lines[floor(numsents*0.85):]
+        train_sents, test_sents, val_sents = lines[:floor(numsents*0.7)] ,lines[floor(numsents*0.7):floor(numsents*0.85)],lines[floor(numsents*0.85):]
 
         self.idx2word = dict(enumerate(self.vocab))
         self.word2idx = {value:key for (key, value) in self.idx2word.items()}
 
+        # A dictionary that contains batch information as a triple consisting of:
+        # The list of batch matrices
+        # The list of label vectors
+        # The index where the next batchshould be extracted
+        self.all_batch_triples={}
 
-        self.train_batches, self.train_labels = self._make_batches(batch_size, train_sents)
-        self.test_batches, self.test_labels = self._make_batches(batch_size, test_sents)
-        self.val_batches, self.val_labels = self._make_batches(batch_size, val_sents)
+        #populate the triplets via the _make_batches method
+        self.allbatch_triples["train"]=  self._make_batches(batch_size, train_sents)
+        self.all_batch_triples["test"] = self._make_batches(batch_size, test_sents)
+        self.all_batch_triples["validation"] = self._make_batches(batch_size, val_sents)
 
 
         self.num_batches = 0
@@ -72,28 +78,32 @@ class DataLoader(object):
         '''
         n=self.window
         batches=[]
+        labels=[]
         for sentence in sentences:
             current_batch=[]
-            for begin_ind in range(len(sentence)-n):
+            current_labels=[]
+            #Pad sentence with out of sentence tokens
+            sentence=["#"]*(n-1) +sentence + ["#"]*(n-1)
+            # compile the matrix
+            for begin_ind in range(len(sentence)-n-1):
                 chunk= sentence[begin_ind:begin_ind+n]
                 chunk_ids=[ word2idx[word] for word in chunk]
                 current_batch.append(chunk_ids)
-                if len(current_batch)== batch_size:
+                current_labels.append(word2idx[sentence[begin_ind+n+1]])
+                if len(current_batch) == batch_size:
                     batches.append(current_batch)
+                    labels.append(current_labels)
+                    current_labels=[]
                     current_batch=[]
-        current_batch= current_batch
-        return batches
+        return (batches, labels, 0)
+
     def _load_next_batch(self, kind="train"):
-        # If last batch reset to new epoch
-        #TODO: Distinguish between the different kinds of batches
-        if self.num_batches == len(self.batches)-1:
-            temp = self.num_batches
-            self.num_batches = 0
-            return self.batches[temp], self.labels[temp]
-        else:
-            temp = self.num_batches
-            self.num_batches += 1
-            return self.batches[temp], self.labels[temp]
+        if self.all_batch_triples[kind][2] > len(self.all_batch_triples[kind][0]){
+            #start a new epoch
+            self.all_batch_triples[kind][2]=0
+            return False
+        }
+        return self.all_batch_triples[kind][0][self.all_batch_triples[kind][2]], self.all_batch_triples[kind][1][self.all_batch_triples[kind][2]]
 
 class SmallConfig:
     pass
