@@ -5,8 +5,6 @@ import functools
 '''
 Model based off of http://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf.
 Works as a simplistic baseline to compare alternative models against.
-TODO: Define generate function (straightforward, make forward pass and use np.argmax to select predicted index, then append idx2word[idx] to running sentence until it returns '<EOS'> or reaches a set length
-TODO: TSNE Projections for visualization
 '''
 
 class BasicNeuralLM:

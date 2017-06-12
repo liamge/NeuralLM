@@ -57,6 +57,43 @@ def train_model(model, visualize_embeddings=True):
             saver_embed = tf.train.Saver([embedding_var])
             saver_embed.save(sess, 'processed/model3.ckpt', 1)
 
+def generate_sequence(model, seed):
+    '''
+    :param model: model object which has had model.build_graph() already run
+    :param seed: list of num_steps strings
+    :return: list of strings
+    '''
+    assert len(seed) == model.conf.num_steps, "Error: seed is of incorrect length, must provide list of {} strings".format(model.conf.num_steps)
+    seq = []
+    for w in seed:
+        if w not in model.data.V:
+            seq.append('<UNK>')
+        else:
+            seq.append(model.data.word2idx[w])
+
+    model.conf.batch_size = 1
+
+    saver = tf.train.Saver()
+
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        ckpt = tf.train.get_checkpoint_state(os.path.dirname('checkpoints/checkpoint'))
+
+        if ckpt and ckpt.model_checkpoint_path:
+            saver.restore(sess, ckpt.model_checkpoint_path)
+
+        current = seq[-1]
+        while current != '<EOS>':
+            feed_dict = {model.train_input: seq[-model.conf.num_steps:]}
+            current = sess.run(tf.arg_max(tf.nn.softmax(model.logits)), feed_dict=feed_dict)
+            seq.append(current)
+
+    return seq
+
+
+
+
+
 if __name__ == "__main__":
     args = parse_args()
     data = DataLoader(args['datafile'])
