@@ -32,29 +32,32 @@ def train_model(model, visualize_embeddings=True):
         for i in range(initial_step + model.conf.num_epochs):
             epoch_loss = 0.0
             # Training loop for epoch
-            total_loss = 0.0
-            for index in range(model.data.num_batches["train"]):
-                batch_X, batch_y_ = model.data._load_next_batch()
-                feed_dict = {model.train_input: batch_X, model.train_labels: batch_y_}
+            train_loss = 0.0
+            j = 0
+            print(sess.run(model.global_step))
+            for batch_X, batch_y in model.data.load_batches():
+                feed_dict = {model.train_input: batch_X, model.train_labels: batch_y}
                 loss_batch, _ = sess.run([model.loss, model.optimizer],
                                                 feed_dict=feed_dict)
-                total_loss += loss_batch
+                train_loss += loss_batch
                 epoch_loss += loss_batch
-                if (index + 1) % model.conf.skip_step == 0:
-                    total_loss = sum(total_loss)
-                    print('Average loss at step {}: {:5.1f}'.format(index, total_loss / model.conf.skip_step))
-                    total_loss = 0.0
-                    saver.save(sess, 'checkpoints/language-model', index)
+                j += 1
+                if (j + 1) % model.conf.skip_step == 0:
+                    train_loss = sum(train_loss)
+                    print('Average loss at step {}: {:5.1f}'.format(j, train_loss / model.conf.skip_step))
+                    train_loss = 0.0
+                    saver.save(sess, 'checkpoints/language-model', j)
             # Validation loop for epoch
             val_loss = 0.0
-            for index in range(model.data.num_batches["validation"]):
-                batch_X, batch_y_ = model.data._load_next_batch()
-                feed_dict = {model.train_input: batch_X, model.train_labels: batch_y_}
+            for batch_X, batch_y in model.data.load_batches(kind='validation'):
+                feed_dict = {model.train_input: batch_X, model.train_labels: batch_y}
                 loss_batch, _ = sess.run([model.loss, model.optimizer],
                                                   feed_dict=feed_dict)
-                total_loss += loss_batch
-            print("Average validation set loss: {}".format(val_loss / model.data.num_batches["validation"]))
+                val_loss += loss_batch
+            print("Average validation set loss: {}".format(sum(val_loss) / model.data.num_batches["validation"]))
             print("Epoch {} complete with average error of {} on training set".format(i+1, sum(epoch_loss) / model.data.num_batches["train"]))
+            print(' '.join(generate_sequence(model, ['#']*(data.window-1)+['i'])))
+            print(' '.join(['-']*35))
 
         if visualize_embeddings:
             final_embed_matrix = sess.run(model.embed_matrix)
@@ -81,7 +84,7 @@ def generate_sequence(model, seed, max_seq_len=45):
     assert len(seed) == model.conf.num_steps, "Error: seed is of incorrect length, must provide list of {} strings".format(model.conf.num_steps)
     seq = []
     for w in seed:
-        if w not in model.data.V:
+        if w not in model.data.vocab:
             seq.append(model.data.word2idx['<UNK>'])
         else:
             seq.append(model.data.word2idx[w])
@@ -97,13 +100,14 @@ def generate_sequence(model, seed, max_seq_len=45):
             saver.restore(sess, ckpt.model_checkpoint_path)
 
         current = seq[-1]
-        while current != '<EOS>' or len(seq) <= max_seq_len:
+        while model.data.idx2word[current] != '#' and len(seq) <= max_seq_len:
             # Lazy solution here where we just pass the input sequence and a matrix of zeros so its the right shape
             input_matrix = np.zeros([model.conf.batch_size, model.conf.num_steps])
-            input_matrix[0, :] = seq[-model.conf.num_steps]
+            input_matrix[0, :] = seq[-model.conf.num_steps:]
             feed_dict = {model.train_input: input_matrix}
-            current = sess.run(tf.argmax(tf.nn.softmax(model.logits)), feed_dict=feed_dict)
+            current = sess.run(tf.argmax(tf.nn.softmax(model.logits), axis=1), feed_dict=feed_dict)
             seq.append(current[0])
+            current = current[0]
 
     return [model.data.idx2word[idx] for idx in seq]
 

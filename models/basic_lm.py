@@ -13,6 +13,9 @@ class BasicNeuralLM:
         self.data = data_loader
 
         self.global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
+        starter_learning_rate = conf.lr
+        self.learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step,
+                                                        100, 0.96, staircase=True)
 
     def build_placeholders(self):
         self.train_input = tf.placeholder(tf.int32, shape=[self.conf.batch_size, self.conf.num_steps])
@@ -59,7 +62,7 @@ class BasicNeuralLM:
 
     def build_optimizer(self):
         with tf.device(self.conf.device):
-            self.optimizer = tf.train.GradientDescentOptimizer(self.conf.lr).minimize(self.loss, global_step=self.global_step)
+            self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step)
 
     def build_summaries(self):
         # For tensorboard visualization, run main.py then in command line prompt type:

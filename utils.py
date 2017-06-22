@@ -17,8 +17,7 @@ class DataLoader(object):
         :param batch_size: size of minibatches
         :return: object with useful tools for handling corpus
         '''
-        self.window = 5
-        self.num_steps = num_steps
+        self.window = num_steps
         filereader = open(filename, 'r')
         lines = []
         counts = Counter()
@@ -30,7 +29,7 @@ class DataLoader(object):
         #consolidate vocabulary
         self.vocab = []
         for w in counts:
-            if counts[w] > 3:
+            if counts[w] >= 2 :
                 self.vocab.append(w)
         self.vocab.append("<UNK>")
         self.vocab.append("#")
@@ -41,8 +40,8 @@ class DataLoader(object):
             for i in range(len(line)):
                 if line[i] not in self.vocab:
                     line[i] = "<UNK>"
-        #set a random seed to keep the split
-        random.seed(31415)
+
+        np.random.seed(31415)
         #shuffle the lines and split them in train test and validation
         random.shuffle(lines)
         num_sents= len(lines)
@@ -67,6 +66,7 @@ class DataLoader(object):
         self.num_batches["train"] = len(self.all_batch_triples["train"][0])
         self.num_batches["test"] = len(self.all_batch_triples["test"][0])
         self.num_batches["validation"] = len(self.all_batch_triples["validation"][0])
+        assert self.num_batches['validation'] > 0 and self.num_batches['train'] > 0, "Error: batch size too big, try lowering."
 
     def _cast_index(self):
         '''
@@ -99,27 +99,24 @@ class DataLoader(object):
                     labels.append(current_labels)
                     current_labels=[]
                     current_batch=[]
-        return (batches, labels, 0)
+        return [batches, labels, 0]
 
-    def _load_next_batch(self, kind="train"):
-        if self.all_batch_triples[kind][2] > len(self.all_batch_triples[kind][0]):
-            #start a new epoch
-            self.all_batch_triples[kind][2]=0
-            return False
-        }
-        answer = self.all_batch_triples[kind][0][self.all_batch_triples[kind][2]], self.all_batch_triples[kind][1][self.all_batch_triples[kind][2]]
-        self.all_batch_triples[kind][2]+=1
-        return answer
+    def load_batches(self, kind="train"):
+        random.seed(random.randint)
+        batch_pairs=list(zip(self.all_batch_triples[kind][0],self.all_batch_triples[kind][1]))
+        random.shuffle(batch_pairs)
+        random.seed(31415)
+        return batch_pairs
 
 class SmallConfig:
     def __init__(self):
-        self.batch_size = 30
-        self.num_steps = 5
-        self.num_epochs = 15
-        self.skip_step = 100
-        self.embed_dim = 300
-        self.hidden_dim = 1000
-        self.lr = 0.001
+        self.batch_size = 100
+        self.num_steps = 6
+        self.num_epochs = 50
+        self.skip_step = 2
+        self.embed_dim = 100
+        self.hidden_dim = 60
+        self.lr = 0.01
         self.direct_connections = True
         self.device = "/cpu:0"
         self.trainable = True
